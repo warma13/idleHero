@@ -661,11 +661,12 @@ local function BuildGameUI()
         local isReplay = (chapter < maxCh) or (chapter == maxCh and stage < maxSt)
         GameState.stage.chapter = chapter
         GameState.stage.stage = stage
-        GameState.stage.isReplay = isReplay or nil
+        BattleSystem.Init(BattleSystem.areaW, BattleSystem.areaH)
+        -- Init 会清除 isReplay，所以必须在 Init 之后设置
+        BattleSystem.isReplay = isReplay
         if isReplay then
             print("[StageSelect] Replay mode: jumping to cleared stage " .. chapter .. "-" .. stage)
         end
-        BattleSystem.Init(BattleSystem.areaW, BattleSystem.areaH)
         RefreshStageInfo()
         SlotSaveSystem.SaveNow()
     end)
@@ -1059,12 +1060,7 @@ function RefreshStageInfo()
         local gs = GameState.stage
         local stageCfg = StageConfig.GetStage(gs.chapter, gs.stage)
         local stageName = stageCfg and stageCfg.name or ""
-        -- 显示击杀进度
-        local Spawner = require("battle.Spawner")
-        local total = Spawner.GetTotalInWave()
-        local kills = GameState.wave.killCount or 0
-        local progress = total > 0 and (" [" .. kills .. "/" .. total .. "]") or ""
-        label:SetText(gs.chapter .. "-" .. gs.stage .. " " .. stageName .. progress)
+        label:SetText(gs.chapter .. "-" .. gs.stage .. " " .. stageName)
     end
 
     -- 退出按钮: 副本模式下显示, 主线/深渊隐藏

@@ -58,7 +58,7 @@ function M.Install(GS)
     function GS.GetGemBagUsedSlots()
         local count = 0
         for _, c in pairs(GS.gemBag or {}) do
-            if c and c > 0 then count = count + 1 end
+            if type(c) == "number" and c > 0 then count = count + 1 end
         end
         return count
     end
@@ -69,6 +69,12 @@ function M.Install(GS)
         return Config.EXPAND_BASE_COST + (n - 1) * Config.EXPAND_COST_INCREMENT
     end
 
+    --- 下次宝石背包扩容消耗的金币数量
+    function GS.GetGemBagExpandGoldCost()
+        local n = (GS.gemBagExpandCount or 0) + 1
+        return Config.EXPAND_GOLD_BASE + (n - 1) * Config.EXPAND_GOLD_INCREMENT
+    end
+
     --- 尝试扩容宝石背包
     --- @return boolean success, string|nil reason
     function GS.ExpandGemBag()
@@ -76,12 +82,18 @@ function M.Install(GS)
         if curSize >= Config.GEM_BAG_MAX_SIZE then
             return false, "宝石背包已达上限 " .. Config.GEM_BAG_MAX_SIZE .. " 格"
         end
-        local cost = GS.GetGemBagExpandCost()
-        local cur = GS.GetSoulCrystal()
-        if cur < cost then
-            return false, "魂晶不足 (" .. cur .. "/" .. cost .. ")"
+        local crystalCost = GS.GetGemBagExpandCost()
+        local goldCost = GS.GetGemBagExpandGoldCost()
+        local curCrystal = GS.GetSoulCrystal()
+        local curGold = GS.player.gold
+        if curCrystal < crystalCost then
+            return false, "魂晶不足 (" .. curCrystal .. "/" .. crystalCost .. ")"
         end
-        GS.materials.soulCrystal = GS.materials.soulCrystal - cost
+        if curGold < goldCost then
+            return false, "金币不足 (" .. curGold .. "/" .. goldCost .. ")"
+        end
+        GS.materials.soulCrystal = GS.materials.soulCrystal - crystalCost
+        GS.SpendGold(goldCost)
         GS.gemBagExpandCount = (GS.gemBagExpandCount or 0) + 1
         return true, nil
     end

@@ -143,10 +143,14 @@ function StageManager.NextWave(bs)
         SaveSystem.SaveNow()
     end
 
-    -- 推进到下一关（回刷模式下保持当前关卡不推进）
-    if gs.isReplay then
+    -- 推进到下一关（动态判断：当前关卡低于最高记录则为回刷，不推进）
+    local maxCh = GameState.records and GameState.records.maxChapter or 1
+    local maxSt = GameState.records and GameState.records.maxStage or 1
+    local alreadyCleared = (gs.chapter < maxCh) or (gs.chapter == maxCh and gs.stage < maxSt)
+    if alreadyCleared then
         -- 回刷已通关关卡：不推进，保持当前关卡重复刷
-        print("[BattleSystem] Replay mode: staying at " .. gs.chapter .. "-" .. gs.stage)
+        print("[BattleSystem] Replay mode (cleared): staying at " .. gs.chapter .. "-" .. gs.stage
+            .. " (max=" .. maxCh .. "-" .. maxSt .. ")")
     else
         local totalStages = StageConfig.GetStageCount(gs.chapter)
         if gs.stage < totalStages then
@@ -181,6 +185,7 @@ function StageManager.NextWave(bs)
     bs.waveAnnounce = 2.0
 
     Spawner.Reset()
+    Spawner.ResetStageTotal()
     Spawner.BuildQueue()
 
     -- 更新 BOSS 标记
@@ -268,6 +273,7 @@ function StageManager.RetryStage(bs)
     GameState._iceAvatarTimer = 0
 
     Spawner.Reset()
+    Spawner.ResetStageTotal()
     Spawner.BuildQueue()
 
     -- 引导系统: 波次切换时强制重置

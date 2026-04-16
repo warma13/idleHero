@@ -109,19 +109,70 @@ function M.Install(GS, ctx)
         return Config.EXPAND_BASE_COST + (n - 1) * Config.EXPAND_COST_INCREMENT
     end
 
+    function GS.GetExpandGoldCost()
+        local n = (GS.expandCount or 0) + 1
+        return Config.EXPAND_GOLD_BASE + (n - 1) * Config.EXPAND_GOLD_INCREMENT
+    end
+
     function GS.ExpandInventory()
         local curSize = GS.GetInventorySize()
         if curSize >= Config.INVENTORY_MAX_SIZE then
             return false, "背包已达上限 " .. Config.INVENTORY_MAX_SIZE .. " 格"
         end
-        local cost = GS.GetExpandCost()
-        local cur = GS.GetSoulCrystal()
-        if cur < cost then
-            return false, "魂晶不足 (" .. cur .. "/" .. cost .. ")"
+        local crystalCost = GS.GetExpandCost()
+        local goldCost = GS.GetExpandGoldCost()
+        local curCrystal = GS.GetSoulCrystal()
+        local curGold = GS.player.gold
+        if curCrystal < crystalCost then
+            return false, "魂晶不足 (" .. curCrystal .. "/" .. crystalCost .. ")"
         end
-        GS.materials.soulCrystal = GS.materials.soulCrystal - cost
+        if curGold < goldCost then
+            return false, "金币不足 (" .. curGold .. "/" .. goldCost .. ")"
+        end
+        GS.materials.soulCrystal = GS.materials.soulCrystal - crystalCost
+        GS.SpendGold(goldCost)
         GS.expandCount = (GS.expandCount or 0) + 1
-        print("[GameState] Inventory expanded to " .. GS.GetInventorySize() .. " slots (cost " .. cost .. " soul crystals)")
+        print("[GameState] Inventory expanded to " .. GS.GetInventorySize() .. " slots")
+        return true, nil
+    end
+
+    -- ================================================================
+    -- 材料背包容量
+    -- ================================================================
+
+    function GS.GetMaterialBagSize()
+        return Config.MATERIAL_BAG_SIZE + (GS.matExpandCount or 0) * Config.MATERIAL_BAG_EXPAND_SLOTS
+    end
+
+    function GS.GetMaterialBagExpandCost()
+        local n = (GS.matExpandCount or 0) + 1
+        return Config.EXPAND_BASE_COST + (n - 1) * Config.EXPAND_COST_INCREMENT
+    end
+
+    function GS.GetMaterialBagExpandGoldCost()
+        local n = (GS.matExpandCount or 0) + 1
+        return Config.EXPAND_GOLD_BASE + (n - 1) * Config.EXPAND_GOLD_INCREMENT
+    end
+
+    function GS.ExpandMaterialBag()
+        local curSize = GS.GetMaterialBagSize()
+        if curSize >= Config.MATERIAL_BAG_MAX_SIZE then
+            return false, "材料背包已达上限 " .. Config.MATERIAL_BAG_MAX_SIZE .. " 格"
+        end
+        local crystalCost = GS.GetMaterialBagExpandCost()
+        local goldCost = GS.GetMaterialBagExpandGoldCost()
+        local curCrystal = GS.GetSoulCrystal()
+        local curGold = GS.player.gold
+        if curCrystal < crystalCost then
+            return false, "魂晶不足 (" .. curCrystal .. "/" .. crystalCost .. ")"
+        end
+        if curGold < goldCost then
+            return false, "金币不足 (" .. curGold .. "/" .. goldCost .. ")"
+        end
+        GS.materials.soulCrystal = GS.materials.soulCrystal - crystalCost
+        GS.SpendGold(goldCost)
+        GS.matExpandCount = (GS.matExpandCount or 0) + 1
+        print("[GameState] Material bag expanded to " .. GS.GetMaterialBagSize() .. " slots")
         return true, nil
     end
 end

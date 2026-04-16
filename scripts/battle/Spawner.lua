@@ -14,12 +14,71 @@ local spawnTimer_ = 0
 local spawnQueue_ = {}   -- 当前波次待生成的怪物队列
 local spawnIdx_   = 0    -- 当前队列中已生成的数量
 local totalInWave_ = 0   -- 当前波次总怪物数
+local stageTotalMonsters_ = 0  -- 当前关卡所有波次累计怪物总数
 
 function Spawner.Reset()
     spawnTimer_ = 0.5
     spawnQueue_ = {}
     spawnIdx_   = 0
     totalInWave_ = 0
+end
+
+--- 重置并预计算当前关卡所有波次的怪物总数
+function Spawner.ResetStageTotal()
+    stageTotalMonsters_ = 0
+
+    -- 特殊模式无法预计算，依赖 BuildQueue 累加
+    local mode = GameMode.GetActive()
+    if mode and mode.BuildSpawnQueue then return end
+
+    local gs = GameState.stage
+    local stageCfg, chapterCfg = StageConfig.GetStage(gs.chapter, gs.stage)
+    if not stageCfg or not stageCfg.waves then return end
+
+    local tagLevels = chapterCfg and chapterCfg.tagLevels or nil
+
+    -- 检测是否为 Boss 关卡
+    local hasBoss = false
+    for _, wave in ipairs(stageCfg.waves) do
+        if wave.monsters then
+            for _, m in ipairs(wave.monsters) do
+                local t = StageConfig.ResolveMonster(m.id, gs.chapter, tagLevels)
+                if t and t.isBoss then hasBoss = true; break end
+            end
+        end
+        if hasBoss then break end
+    end
+
+    if hasBoss then
+        -- Boss 关卡：小怪上限 MAX_BOSS_MOBS + Boss 数量
+        local MAX_BOSS_MOBS = 10
+        local bossCount = 0
+        local mobTotal  = 0
+        for _, wave in ipairs(stageCfg.waves) do
+            if wave.monsters then
+                for _, entry in ipairs(wave.monsters) do
+                    local t = StageConfig.ResolveMonster(entry.id, gs.chapter, tagLevels)
+                    if t then
+                        if t.isBoss then
+                            bossCount = bossCount + entry.count
+                        else
+                            mobTotal = mobTotal + entry.count
+                        end
+                    end
+                end
+            end
+        end
+        stageTotalMonsters_ = math.min(mobTotal, MAX_BOSS_MOBS) + bossCount
+    else
+        -- 非 Boss 关卡：所有波次累加
+        for _, wave in ipairs(stageCfg.waves) do
+            if wave.monsters then
+                for _, entry in ipairs(wave.monsters) do
+                    stageTotalMonsters_ = stageTotalMonsters_ + entry.count
+                end
+            end
+        end
+    end
 end
 
 --- 构建当前波次的生成队列
@@ -37,6 +96,7 @@ function Spawner.BuildQueue()
             end
         end
         totalInWave_ = #spawnQueue_
+        stageTotalMonsters_ = stageTotalMonsters_ + totalInWave_
         return
     end
 
@@ -123,6 +183,8 @@ function Spawner.BuildQueue()
     end
 
     totalInWave_ = #spawnQueue_
+    -- 特殊模式路径：ResetStageTotal 跳过了预计算，需要在此累加
+    -- 正常关卡路径：ResetStageTotal 已预计算完整总数，不再重复累加
 end
 
 function Spawner.IsWaveSpawnDone()
@@ -131,6 +193,11 @@ end
 
 function Spawner.GetTotalInWave()
     return totalInWave_
+end
+
+--- 获取当前关卡所有波次累计怪物总数
+function Spawner.GetStageTotalMonsters()
+    return stageTotalMonsters_
 end
 
 function Spawner.Update(dt, enemies, areaW, areaH)

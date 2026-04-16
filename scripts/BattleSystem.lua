@@ -139,6 +139,7 @@ function BattleSystem.Init(areaWidth, areaHeight)
     BattleSystem.waveAnnounce = 2.0
     BattleSystem.screenShake  = 0
     BattleSystem.stageCleared = false
+    BattleSystem.isReplay = false
     BattleSystem.stageClearTimer = 0
     BattleSystem.playerDeadTimer = 0
     BattleSystem.isPlayerDead = false
@@ -158,7 +159,9 @@ function BattleSystem.Init(areaWidth, areaHeight)
     GameState._arcaneStrikeAtkSpdTimer = 0
     GameState._arcaneStrikeCastCount = 0
 
+    GameState.wave.killCount = 0
     Spawner.Reset()
+    Spawner.ResetStageTotal()
     GameState.stage.waveIdx = 1
     GameState.stage.cleared = false
     Spawner.BuildQueue()
@@ -262,13 +265,14 @@ end
 
 function BattleSystem.CastSkill(skillCfg, lv)
     local success = SkillCaster.CastSkill(BattleSystem, skillCfg, lv)
-    if success == false then return end  -- 法力不足, 跳过后续效果
+    if success == false then return false end  -- 法力不足, 跳过后续效果
     -- 符文编织2件: 技能释放叠符文
     BuffManager.OnRuneWeaverSkillCast(BattleSystem)
     -- 龙息之怒4件: 技能命中回调 (交替循环)
     BuffManager.OnDragonFurySkillHit(BattleSystem)
     -- 符文编织6件: 共鸣期间技能命中回血
     BuffManager.OnRuneResonanceSkillHit()
+    return true
 end
 
 -- ============================================================================
@@ -417,7 +421,7 @@ function BattleSystem.Update(dt)
         BattleSystem.PlayerAttack(idx)
     end, bs)
     PlayerAI.UpdateSkills(dt, bs.playerBattle, bs.enemies, function(cfg, lv)
-        BattleSystem.CastSkill(cfg, lv)
+        return BattleSystem.CastSkill(cfg, lv)
     end)
 
     -- 子系统更新

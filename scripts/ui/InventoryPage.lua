@@ -18,6 +18,7 @@ local page_ = nil
 local expandOverlay_ = nil         -- 扩容确认浮层
 ---@type Widget
 local gemExpandOverlay_ = nil      -- 宝石背包扩容确认浮层
+local matExpandOverlay_ = nil      -- 材料背包扩容确认浮层
 ---@type Widget
 local decompOrangeOverlay_ = nil   -- 分解橙色确认浮层
 ---@type Widget
@@ -252,7 +253,6 @@ local function RebuildTabs()
     tabsPanel:ClearChildren()
 
     local bagText = "背包 " .. #GameState.inventory .. "/" .. GameState.GetInventorySize()
-    local gemText = "宝石 " .. GameState.GetGemBagUsedSlots() .. "/" .. GameState.GetGemBagSize()
 
     -- 统计材料占用格子数（含溢出堆叠）
     local matUsed = 0
@@ -262,12 +262,11 @@ local function RebuildTabs()
             matUsed = matUsed + math.ceil(amt / 999)
         end
     end
-    local matText = "材料 " .. matUsed .. "/40"
+    local matText = "材料 " .. matUsed .. "/" .. GameState.GetMaterialBagSize()
 
     local tabs = {
         { key = "bag", text = bagText },
         { key = "mat", text = matText },
-        { key = "gem", text = gemText },
     }
     for _, tab in ipairs(tabs) do
         local active = currentTab_ == tab.key
@@ -602,8 +601,9 @@ function InventoryPage.Refresh()
             })
         end
         -- 扩容格子 ("+")
-        local expandCost = GameState.GetExpandCost()
-        local canExpand = GameState.GetSoulCrystal() >= expandCost
+        local expandCrystalCost = GameState.GetExpandCost()
+        local expandGoldCost = GameState.GetExpandGoldCost()
+        local canExpand = GameState.GetSoulCrystal() >= expandCrystalCost and GameState.player.gold >= expandGoldCost
         invGrid:AddChild(UI.Panel {
             width = 56, height = 60,
             backgroundColor = canExpand and { 60, 40, 100, 180 } or { 30, 30, 40, 120 },
@@ -616,7 +616,8 @@ function InventoryPage.Refresh()
             end,
             children = {
                 UI.Label { text = "+", fontSize = 22, fontColor = canExpand and { 160, 80, 255, 230 } or { 80, 70, 100, 150 }, pointerEvents = "none" },
-                UI.Label { text = expandCost .. " 魂晶", fontSize = 7, fontColor = canExpand and { 160, 80, 255, 180 } or { 80, 70, 100, 120 }, pointerEvents = "none" },
+                UI.Label { text = expandGoldCost .. " 金", fontSize = 7, fontColor = canExpand and { 255, 215, 0, 180 } or { 80, 70, 100, 120 }, pointerEvents = "none" },
+                UI.Label { text = expandCrystalCost .. " 魂晶", fontSize = 7, fontColor = canExpand and { 160, 80, 255, 180 } or { 80, 70, 100, 120 }, pointerEvents = "none" },
             },
         })
     end
@@ -706,8 +707,9 @@ function InventoryPage.Refresh()
         end
 
         -- 宝石背包扩容格子 ("+")
-        local gemExpandCost = GameState.GetGemBagExpandCost()
-        local canGemExpand = GameState.GetSoulCrystal() >= gemExpandCost and gemBagSize < Config.GEM_BAG_MAX_SIZE
+        local gemExpandCrystalCost = GameState.GetGemBagExpandCost()
+        local gemExpandGoldCost = GameState.GetGemBagExpandGoldCost()
+        local canGemExpand = GameState.GetSoulCrystal() >= gemExpandCrystalCost and GameState.player.gold >= gemExpandGoldCost and gemBagSize < Config.GEM_BAG_MAX_SIZE
         gemGrid:AddChild(UI.Panel {
             width = 56, height = 60,
             backgroundColor = canGemExpand and { 60, 40, 100, 180 } or { 30, 30, 40, 120 },
@@ -720,15 +722,16 @@ function InventoryPage.Refresh()
             end,
             children = {
                 UI.Label { text = "+", fontSize = 22, fontColor = canGemExpand and { 160, 80, 255, 230 } or { 80, 70, 100, 150 }, pointerEvents = "none" },
-                UI.Label { text = gemExpandCost .. " 魂晶", fontSize = 7, fontColor = canGemExpand and { 160, 80, 255, 180 } or { 80, 70, 100, 120 }, pointerEvents = "none" },
+                UI.Label { text = gemExpandGoldCost .. " 金", fontSize = 7, fontColor = canGemExpand and { 255, 200, 50, 180 } or { 80, 70, 100, 120 }, pointerEvents = "none" },
+                UI.Label { text = gemExpandCrystalCost .. " 魂晶", fontSize = 7, fontColor = canGemExpand and { 160, 80, 255, 180 } or { 80, 70, 100, 120 }, pointerEvents = "none" },
             },
         })
     end
 
-    -- 材料网格（仅材料Tab时重建，固定40格，支持堆叠溢出）
+    -- 材料网格（仅材料Tab时重建，动态容量，支持堆叠溢出）
     if matGrid and currentTab_ == "mat" then
         matGrid:ClearChildren()
-        local MAT_BAG_SIZE = 40
+        local MAT_BAG_SIZE = GameState.GetMaterialBagSize()
         local MAT_STACK_MAX = 999
 
         -- 收集有数量的材料，超过999的拆分为多个格子
@@ -791,6 +794,27 @@ function InventoryPage.Refresh()
                 },
             })
         end
+
+        -- 材料背包扩容格子 ("+")
+        local matExpandCrystalCost = GameState.GetMaterialBagExpandCost()
+        local matExpandGoldCost = GameState.GetMaterialBagExpandGoldCost()
+        local canMatExpand = GameState.GetSoulCrystal() >= matExpandCrystalCost and GameState.player.gold >= matExpandGoldCost and MAT_BAG_SIZE < Config.MATERIAL_BAG_MAX_SIZE
+        matGrid:AddChild(UI.Panel {
+            width = 56, height = 60,
+            backgroundColor = canMatExpand and { 40, 80, 60, 180 } or { 30, 30, 40, 120 },
+            borderColor = canMatExpand and { 80, 200, 120, 180 } or { 60, 50, 80, 100 },
+            borderWidth = 1, borderRadius = 4,
+            borderStyle = "dashed",
+            alignItems = "center", justifyContent = "center", gap = 1,
+            onClick = function()
+                InventoryPage.ShowMatBagExpandConfirm()
+            end,
+            children = {
+                UI.Label { text = "+", fontSize = 22, fontColor = canMatExpand and { 80, 200, 120, 230 } or { 80, 70, 100, 150 }, pointerEvents = "none" },
+                UI.Label { text = matExpandGoldCost .. " 金", fontSize = 7, fontColor = canMatExpand and { 255, 200, 50, 180 } or { 80, 70, 100, 120 }, pointerEvents = "none" },
+                UI.Label { text = matExpandCrystalCost .. " 魂晶", fontSize = 7, fontColor = canMatExpand and { 80, 200, 120, 180 } or { 80, 70, 100, 120 }, pointerEvents = "none" },
+            },
+        })
     end
 end
 
@@ -809,13 +833,21 @@ function InventoryPage.ShowExpandConfirm()
     InventoryPage.CloseCompare()
     InventoryPage.CloseExpandConfirm()
 
-    local cost = GameState.GetExpandCost()
-    local cur = GameState.GetSoulCrystal()
+    local crystalCost = GameState.GetExpandCost()
+    local goldCost = GameState.GetExpandGoldCost()
+    local curCrystal = GameState.GetSoulCrystal()
+    local curGold = GameState.player.gold
     local curSize = GameState.GetInventorySize()
     local maxSize = Config.INVENTORY_MAX_SIZE
     local atMax = curSize >= maxSize
-    local canExpand = (not atMax) and (cur >= cost)
+    local canExpand = (not atMax) and (curCrystal >= crystalCost) and (curGold >= goldCost)
     local addSlots = Config.INVENTORY_EXPAND_SLOTS
+
+    local btnText = "确认扩容"
+    if atMax then btnText = "已达上限"
+    elseif curGold < goldCost then btnText = "金币不足"
+    elseif curCrystal < crystalCost then btnText = "魂晶不足"
+    end
 
     expandOverlay_ = UI.Panel {
         position = "absolute",
@@ -854,11 +886,20 @@ function InventoryPage.ShowExpandConfirm()
                     atMax
                         and UI.Label { text = "已达上限", fontSize = 11, fontColor = { 255, 100, 100, 220 } }
                         or  UI.Label { text = "扩容后: " .. (curSize + addSlots) .. " 格 (+" .. addSlots .. ")", fontSize = 11, fontColor = { 80, 255, 80, 220 } },
+                    -- 金币消耗
                     UI.Panel {
                         flexDirection = "row", alignItems = "center", gap = 4, marginTop = 4,
                         children = {
-                            UI.Label { text = "消耗: " .. cost .. " 魂晶", fontSize = 12, fontColor = { 160, 80, 255, 230 } },
-                            UI.Label { text = "(拥有 " .. cur .. ")", fontSize = 10, fontColor = canExpand and { 140, 200, 140, 200 } or { 255, 100, 100, 200 } },
+                            UI.Label { text = "消耗: " .. goldCost .. " 金币", fontSize = 12, fontColor = { 255, 215, 0, 230 } },
+                            UI.Label { text = "(拥有 " .. curGold .. ")", fontSize = 10, fontColor = curGold >= goldCost and { 140, 200, 140, 200 } or { 255, 100, 100, 200 } },
+                        },
+                    },
+                    -- 魂晶消耗
+                    UI.Panel {
+                        flexDirection = "row", alignItems = "center", gap = 4,
+                        children = {
+                            UI.Label { text = "消耗: " .. crystalCost .. " 魂晶", fontSize = 12, fontColor = { 160, 80, 255, 230 } },
+                            UI.Label { text = "(拥有 " .. curCrystal .. ")", fontSize = 10, fontColor = curCrystal >= crystalCost and { 140, 200, 140, 200 } or { 255, 100, 100, 200 } },
                         },
                     },
                     -- 按钮
@@ -866,7 +907,7 @@ function InventoryPage.ShowExpandConfirm()
                         flexDirection = "row", gap = 12, marginTop = 6,
                         children = {
                             UI.Button {
-                                text = atMax and "已达上限" or (canExpand and "确认扩容" or "魂晶不足"),
+                                text = btnText,
                                 height = 32, fontSize = 13,
                                 width = 120,
                                 backgroundColor = canExpand and { 100, 50, 200, 230 } or { 60, 60, 70, 200 },
@@ -874,6 +915,7 @@ function InventoryPage.ShowExpandConfirm()
                                     if not canExpand then return end
                                     local ok, _ = GameState.ExpandInventory()
                                     if ok then
+                                        SaveSystem.MarkDirty()
                                         InventoryPage.CloseExpandConfirm()
                                         shared_.gridDirty = true
                                         InventoryPage.Refresh()
@@ -905,6 +947,128 @@ end
 -- 宝石背包扩容确认浮层
 -- ============================================================================
 
+function InventoryPage.CloseMatBagExpandConfirm()
+    if matExpandOverlay_ then
+        matExpandOverlay_:Destroy()
+        matExpandOverlay_ = nil
+    end
+end
+
+function InventoryPage.ShowMatBagExpandConfirm()
+    InventoryPage.CloseCompare()
+    InventoryPage.CloseMatBagExpandConfirm()
+
+    local crystalCost = GameState.GetMaterialBagExpandCost()
+    local goldCost = GameState.GetMaterialBagExpandGoldCost()
+    local curCrystal = GameState.GetSoulCrystal()
+    local curGold = GameState.player.gold
+    local curSize = GameState.GetMaterialBagSize()
+    local maxSize = Config.MATERIAL_BAG_MAX_SIZE
+    local atMax = curSize >= maxSize
+    local canExpand = (not atMax) and (curCrystal >= crystalCost) and (curGold >= goldCost)
+    local addSlots = Config.MATERIAL_BAG_EXPAND_SLOTS
+
+    local btnText = "确认扩容"
+    if atMax then btnText = "已达上限"
+    elseif curGold < goldCost then btnText = "金币不足"
+    elseif curCrystal < crystalCost then btnText = "魂晶不足"
+    end
+
+    matExpandOverlay_ = UI.Panel {
+        position = "absolute",
+        left = 0, right = 0, bottom = "50%",
+        zIndex = 200,
+        paddingLeft = 8, paddingRight = 8, paddingBottom = 4,
+        children = {
+            UI.Panel {
+                width = "100%",
+                backgroundColor = { 18, 22, 34, 245 },
+                borderColor = { 60, 160, 90, 200 },
+                borderWidth = 1, borderRadius = 8,
+                padding = 12, gap = 8,
+                alignItems = "center",
+                children = {
+                    -- 标题栏
+                    UI.Panel {
+                        flexDirection = "row", justifyContent = "space-between", alignItems = "center",
+                        width = "100%",
+                        children = {
+                            UI.Label { text = "材料背包扩容", fontSize = 14, fontColor = { 80, 200, 120, 240 }, fontWeight = "bold" },
+                            UI.Panel {
+                                width = 24, height = 24,
+                                backgroundColor = { 160, 50, 50, 200 },
+                                borderRadius = 12,
+                                alignItems = "center", justifyContent = "center",
+                                onClick = function() InventoryPage.CloseMatBagExpandConfirm() end,
+                                children = {
+                                    UI.Label { text = "✕", fontSize = 12, fontColor = { 255, 255, 255, 240 } },
+                                },
+                            },
+                        },
+                    },
+                    -- 信息
+                    UI.Label { text = "当前容量: " .. curSize .. "/" .. maxSize .. " 格", fontSize = 11, fontColor = { 180, 190, 210, 220 } },
+                    atMax
+                        and UI.Label { text = "已达上限", fontSize = 11, fontColor = { 255, 100, 100, 220 } }
+                        or  UI.Label { text = "扩容后: " .. (curSize + addSlots) .. " 格 (+" .. addSlots .. ")", fontSize = 11, fontColor = { 80, 255, 80, 220 } },
+                    -- 金币消耗
+                    UI.Panel {
+                        flexDirection = "row", alignItems = "center", gap = 4, marginTop = 4,
+                        children = {
+                            UI.Label { text = "消耗: " .. goldCost .. " 金币", fontSize = 12, fontColor = { 255, 215, 0, 230 } },
+                            UI.Label { text = "(拥有 " .. curGold .. ")", fontSize = 10, fontColor = curGold >= goldCost and { 140, 200, 140, 200 } or { 255, 100, 100, 200 } },
+                        },
+                    },
+                    -- 魂晶消耗
+                    UI.Panel {
+                        flexDirection = "row", alignItems = "center", gap = 4,
+                        children = {
+                            UI.Label { text = "消耗: " .. crystalCost .. " 魂晶", fontSize = 12, fontColor = { 80, 200, 120, 230 } },
+                            UI.Label { text = "(拥有 " .. curCrystal .. ")", fontSize = 10, fontColor = curCrystal >= crystalCost and { 140, 200, 140, 200 } or { 255, 100, 100, 200 } },
+                        },
+                    },
+                    -- 按钮
+                    UI.Panel {
+                        flexDirection = "row", gap = 12, marginTop = 6,
+                        children = {
+                            UI.Button {
+                                text = btnText,
+                                height = 32, fontSize = 13,
+                                width = 120,
+                                backgroundColor = canExpand and { 50, 150, 80, 230 } or { 60, 60, 70, 200 },
+                                onClick = Utils.Debounce(function()
+                                    if not canExpand then return end
+                                    local ok, _ = GameState.ExpandMaterialBag()
+                                    if ok then
+                                        SaveSystem.MarkDirty()
+                                        InventoryPage.CloseMatBagExpandConfirm()
+                                        shared_.gridDirty = true
+                                        InventoryPage.Refresh()
+                                    end
+                                end, 0.5),
+                            },
+                            UI.Button {
+                                text = "取消", height = 32, fontSize = 13,
+                                width = 80,
+                                backgroundColor = { 60, 65, 75, 200 },
+                                onClick = function()
+                                    InventoryPage.CloseMatBagExpandConfirm()
+                                end,
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    }
+
+    if shared_.overlayRoot then
+        shared_.overlayRoot:AddChild(matExpandOverlay_)
+    end
+end
+
+-- ============================================================================
+
 function InventoryPage.CloseGemBagExpandConfirm()
     if gemExpandOverlay_ then
         gemExpandOverlay_:Destroy()
@@ -916,13 +1080,21 @@ function InventoryPage.ShowGemBagExpandConfirm()
     InventoryPage.CloseCompare()
     InventoryPage.CloseGemBagExpandConfirm()
 
-    local cost = GameState.GetGemBagExpandCost()
-    local cur = GameState.GetSoulCrystal()
+    local crystalCost = GameState.GetGemBagExpandCost()
+    local goldCost = GameState.GetGemBagExpandGoldCost()
+    local curCrystal = GameState.GetSoulCrystal()
+    local curGold = GameState.player.gold
     local curSize = GameState.GetGemBagSize()
     local maxSize = Config.GEM_BAG_MAX_SIZE
     local atMax = curSize >= maxSize
-    local canExpand = (not atMax) and (cur >= cost)
+    local canExpand = (not atMax) and (curCrystal >= crystalCost) and (curGold >= goldCost)
     local addSlots = Config.GEM_BAG_EXPAND_SLOTS
+
+    local btnText = "确认扩容"
+    if atMax then btnText = "已达上限"
+    elseif curGold < goldCost then btnText = "金币不足"
+    elseif curCrystal < crystalCost then btnText = "魂晶不足"
+    end
 
     gemExpandOverlay_ = UI.Panel {
         position = "absolute",
@@ -961,11 +1133,20 @@ function InventoryPage.ShowGemBagExpandConfirm()
                     atMax
                         and UI.Label { text = "已达上限", fontSize = 11, fontColor = { 255, 100, 100, 220 } }
                         or  UI.Label { text = "扩容后: " .. (curSize + addSlots) .. " 格 (+" .. addSlots .. ")", fontSize = 11, fontColor = { 80, 255, 80, 220 } },
+                    -- 金币消耗
                     UI.Panel {
                         flexDirection = "row", alignItems = "center", gap = 4, marginTop = 4,
                         children = {
-                            UI.Label { text = "消耗: " .. cost .. " 魂晶", fontSize = 12, fontColor = { 160, 80, 255, 230 } },
-                            UI.Label { text = "(拥有 " .. cur .. ")", fontSize = 10, fontColor = canExpand and { 140, 200, 140, 200 } or { 255, 100, 100, 200 } },
+                            UI.Label { text = "消耗: " .. goldCost .. " 金币", fontSize = 12, fontColor = { 255, 215, 0, 230 } },
+                            UI.Label { text = "(拥有 " .. curGold .. ")", fontSize = 10, fontColor = curGold >= goldCost and { 140, 200, 140, 200 } or { 255, 100, 100, 200 } },
+                        },
+                    },
+                    -- 魂晶消耗
+                    UI.Panel {
+                        flexDirection = "row", alignItems = "center", gap = 4,
+                        children = {
+                            UI.Label { text = "消耗: " .. crystalCost .. " 魂晶", fontSize = 12, fontColor = { 160, 80, 255, 230 } },
+                            UI.Label { text = "(拥有 " .. curCrystal .. ")", fontSize = 10, fontColor = curCrystal >= crystalCost and { 140, 200, 140, 200 } or { 255, 100, 100, 200 } },
                         },
                     },
                     -- 按钮
@@ -973,7 +1154,7 @@ function InventoryPage.ShowGemBagExpandConfirm()
                         flexDirection = "row", gap = 12, marginTop = 6,
                         children = {
                             UI.Button {
-                                text = atMax and "已达上限" or (canExpand and "确认扩容" or "魂晶不足"),
+                                text = btnText,
                                 height = 32, fontSize = 13,
                                 width = 120,
                                 backgroundColor = canExpand and { 100, 50, 200, 230 } or { 60, 60, 70, 200 },

@@ -84,6 +84,7 @@ function GameState.Init()
     -- 宝石背包 { ["gemTypeId:qualityIdx"] = count }
     GameState.gemBag = {}
     GameState.gemBagExpandCount = 0
+    GameState.matExpandCount = 0
 
     -- 已兑换码记录
     GameState.redeemedCodes = {}

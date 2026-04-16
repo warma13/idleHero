@@ -1,5 +1,6 @@
 -- ============================================================================
 -- ui/FloatTip.lua - 屏幕上方中间飘字提示 (上浮 + 淡出)
+-- 使用固定容器，避免动态增删 uiRoot_ 子节点导致层级重排
 -- ============================================================================
 
 local UI = require("urhox-libs/UI")
@@ -7,7 +8,7 @@ local UI = require("urhox-libs/UI")
 local FloatTip = {}
 
 ---@type Widget
-local overlayRoot_ = nil
+local container_ = nil   -- 固定容器，只挂载一次
 local tips_ = {}  -- { widget, timer, maxTimer, startTop }
 
 local TIP_DURATION  = 1.6   -- 总持续时间(秒)
@@ -15,16 +16,23 @@ local TIP_START_TOP = 120   -- 起始 top 位置
 local TIP_FLOAT_PX  = 30    -- 上浮像素量
 local TIP_SPACING   = 28    -- 多条之间的间距
 
---- 设置挂载根节点
+--- 设置挂载根节点 (创建固定容器，只调用一次)
 function FloatTip.SetRoot(root)
-    overlayRoot_ = root
+    if not root then return end
+    container_ = UI.Panel {
+        position = "absolute",
+        left = 0, top = 0, right = 0, bottom = 0,
+        zIndex = 950,
+        pointerEvents = "none",
+    }
+    root:AddChild(container_)
 end
 
 --- 显示飘字提示
 ---@param text string  提示文字
 ---@param color? table  文字颜色 {r,g,b,a}  默认金色
 function FloatTip.Show(text, color)
-    if not overlayRoot_ then return end
+    if not container_ then return end
 
     local c = color or { 255, 220, 100, 255 }
 
@@ -35,7 +43,6 @@ function FloatTip.Show(text, color)
         position = "absolute",
         top = startTop, left = "10%", right = "10%",
         height = 24,
-        zIndex = 950,
         flexDirection = "row", alignItems = "center", justifyContent = "center",
         children = {
             UI.Label {
@@ -45,7 +52,7 @@ function FloatTip.Show(text, color)
         },
     }
 
-    overlayRoot_:AddChild(w)
+    container_:AddChild(w)
     table.insert(tips_, { widget = w, timer = TIP_DURATION, maxTimer = TIP_DURATION, startTop = startTop })
 end
 
@@ -70,8 +77,8 @@ function FloatTip.Update(dt)
         local t = tips_[i]
         t.timer = t.timer - dt
         if t.timer <= 0 then
-            if t.widget and overlayRoot_ then
-                overlayRoot_:RemoveChild(t.widget)
+            if t.widget and container_ then
+                container_:RemoveChild(t.widget)
             end
             table.remove(tips_, i)
         else

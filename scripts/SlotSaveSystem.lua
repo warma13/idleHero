@@ -396,6 +396,7 @@ local function SplitIntoGroups(saveData)
             materials   = saveData.materials,
             expandCount = saveData.expandCount,
             gemBagExpandCount = saveData.gemBagExpandCount,
+            matExpandCount = saveData.matExpandCount,
         },
         equip = {
             equipment = CompressEquipmentTable(saveData.equipment, false),
@@ -1280,6 +1281,7 @@ function SlotSaveSystem.Serialize()
         },
         expandCount = GameState.expandCount or 0,
         gemBagExpandCount = GameState.gemBagExpandCount or 0,
+        matExpandCount = GameState.matExpandCount or 0,
         skills      = skills,
         skillLoadout = (function()
             if not GameState.skillLoadout then return nil end
@@ -1407,6 +1409,7 @@ function SlotSaveSystem.Deserialize(data)
 
     GameState.expandCount = data.expandCount or 0
     GameState.gemBagExpandCount = data.gemBagExpandCount or 0
+    GameState.matExpandCount = data.matExpandCount or 0
 
     if data.bag and type(data.bag) == "table" then
         GameState.bag = data.bag

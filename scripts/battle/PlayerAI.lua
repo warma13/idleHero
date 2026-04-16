@@ -710,11 +710,15 @@ function PlayerAI.UpdateSkills(dt, p, enemies, onCastSkill)
             local timer = p.skillTimers[entry.id] or 0
             timer = timer - effectiveDt
             if timer <= 0 then
+                local castSuccess = true
                 if not isIdle then
-                    onCastSkill(skillCfg, lv)
+                    castSuccess = onCastSkill(skillCfg, lv)
                 end
-                -- 无论是否施法, CD 重置 (空闲时技能转好后等待下一波立刻施放)
-                if timer <= 0 then
+                -- 法力不足(返回false)时不重置CD，等待法力恢复后重试
+                if castSuccess == false then
+                    timer = 0  -- 保持就绪，下帧重试
+                else
+                    -- 施法成功或空闲期: 重置CD
                     local finalCd = cd * cdMul
                     -- 至尊雷霆风暴: 闪电技能CD-20%
                     if (GameState._thunderStormSupremeTimer or 0) > 0

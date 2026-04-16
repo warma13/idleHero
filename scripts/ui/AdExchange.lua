@@ -23,10 +23,38 @@ local DAILY_AD_LIMIT = 10
 
 --- 兑换奖励配置
 local REWARDS = {
-    { id = "gold",        name = "金币",   amount = 1500,  icon = "icon_gold_20260307034449.png",           color = { 255, 215, 0 } },
-    { id = "soulCrystal", name = "魂晶",   amount = 10,    icon = "icon_soul_crystal_20260307170758.png",   color = { 180, 120, 255 } },
-    { id = "stone",       name = "强化石", amount = 20,    icon = "icon_stone_20260307170829.png",           color = { 120, 200, 255 } },
+    { id = "gold",        name = "金币",     amount = 1500,  icon = "icon_gold_20260307034449.png",           color = { 255, 215, 0 } },
+    { id = "soulCrystal", name = "魂晶",     amount = 10,    icon = "icon_soul_crystal_20260307170758.png",   color = { 180, 120, 255 } },
+    { id = "orangeEquip", name = "橙色装备", amount = 1,     icon = "icon_stone_20260307170829.png",           color = { 255, 165, 0 } },
 }
+
+-- ============================================================================
+-- 辅助: 获取最高已通关 Boss 所在章节
+-- ============================================================================
+
+--- Boss 在每章的第5关和第10关；maxStage 是"当前关"(未必通关)，已通关 = maxSt-1
+local function GetHighestClearedBossChapter()
+    local maxCh = GameState.records and GameState.records.maxChapter or 1
+    local maxSt = GameState.records and GameState.records.maxStage or 1
+
+    local clearedCh, clearedSt
+    if maxSt > 1 then
+        clearedCh, clearedSt = maxCh, maxSt - 1
+    elseif maxCh > 1 then
+        clearedCh, clearedSt = maxCh - 1, 10
+    else
+        return 1
+    end
+
+    -- 在 clearedCh 中，通关到 clearedSt；Boss 在 5 和 10
+    if clearedSt >= 5 then
+        return clearedCh
+    elseif clearedCh > 1 then
+        return clearedCh - 1
+    else
+        return 1
+    end
+end
 
 -- ============================================================================
 -- 状态
@@ -81,16 +109,32 @@ end
 -- 发放奖励
 -- ============================================================================
 
+--- @return string desc 奖励描述（用于 Toast）
 local function GiveReward(rewardCfg)
     if rewardCfg.id == "gold" then
         GameState.AddGold(rewardCfg.amount)
+        return rewardCfg.name .. " ×" .. rewardCfg.amount
     elseif rewardCfg.id == "soulCrystal" then
         GameState.AddSoulCrystal(rewardCfg.amount)
+        return rewardCfg.name .. " ×" .. rewardCfg.amount
+    elseif rewardCfg.id == "orangeEquip" then
+        local chapter = GetHighestClearedBossChapter()
+        local equip = GameState.CreateEquip(5, chapter)  -- 5 = 橙色品质
+        local _, decompInfo = GameState.AddToInventory(equip)
+        if decompInfo then
+            local FloatTip = require("ui.FloatTip")
+            FloatTip.Decompose(decompInfo)
+            return "橙色装备（已自动分解）"
+        end
+        return equip.name or "橙色装备"
     elseif rewardCfg.id == "stone" or rewardCfg.id == "iron" then
         GameState.AddMaterial("iron", rewardCfg.amount)
+        return rewardCfg.name .. " ×" .. rewardCfg.amount
     elseif rewardCfg.id == "crystal" then
         GameState.AddMaterial("crystal", rewardCfg.amount)
+        return rewardCfg.name .. " ×" .. rewardCfg.amount
     end
+    return rewardCfg.name
 end
 
 -- ============================================================================
@@ -116,9 +160,9 @@ local function WatchAd(rewardCfg)
             watching_ = false
             if result.success then
                 RecordWatch()
-                GiveReward(rewardCfg)
+                local desc = GiveReward(rewardCfg)
                 SaveSystem.Save()
-                Toast.Success("获得 " .. rewardCfg.name .. " ×" .. rewardCfg.amount)
+                Toast.Success("获得 " .. desc)
                 -- 刷新面板
                 if overlay_ then
                     AdExchange.Close()

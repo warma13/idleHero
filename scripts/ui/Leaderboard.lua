@@ -105,6 +105,7 @@ function Leaderboard.Show()
     overlay_ = UI.Panel {
         width = "100%", height = "100%",
         position = "absolute",
+        zIndex = 1000,
         backgroundColor = { 0, 0, 0, 180 },
         alignItems = "center", justifyContent = "center",
         onClick = function() Leaderboard.Hide() end,

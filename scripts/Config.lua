@@ -159,6 +159,9 @@ Config.DROP_TEMPLATES = {
     -- 召唤物/分裂体: 极低或无掉落
     summon    = { goldDrop = { 0, 1 },  goldChance = 0.10, equipChance = 0.00 },
 }
+-- BossArchetypes 生成的 Boss 使用 boss_mid / boss_final，映射到对应模板
+Config.DROP_TEMPLATES.boss_mid   = Config.DROP_TEMPLATES.miniboss
+Config.DROP_TEMPLATES.boss_final = Config.DROP_TEMPLATES.boss
 
 -- GetGoldScale → ConfigCalc.lua
 
@@ -1201,6 +1204,13 @@ Config.SOUL_CRYSTAL = {
 -- 扩容消耗公式: 第N次扩容消耗 = baseCost + (N-1) * costIncrement
 Config.EXPAND_BASE_COST = 100       -- 第一次扩容消耗100魂晶
 Config.EXPAND_COST_INCREMENT = 50   -- 每次递增50 (第二次150, 第三次200...)
+Config.EXPAND_GOLD_BASE = 500       -- 第一次扩容消耗500金币
+Config.EXPAND_GOLD_INCREMENT = 300  -- 每次递增300
+
+-- 材料背包
+Config.MATERIAL_BAG_SIZE = 40           -- 初始材料背包容量
+Config.MATERIAL_BAG_EXPAND_SLOTS = 4    -- 每次扩容增加格子数
+Config.MATERIAL_BAG_MAX_SIZE = 100      -- 材料背包上限
 
 -- ============================================================================
 -- 通用道具定义

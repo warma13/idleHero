@@ -37,7 +37,9 @@ end
 
 function StageSelect.Open()
     if overlay_ then StageSelect.Close() end
-    viewChapter_ = GameState.stage.chapter
+    -- 默认显示最高到达章节（而非当前回刷章节），方便快速切换
+    local maxCh = GameState.records and GameState.records.maxChapter or GameState.stage.chapter
+    viewChapter_ = maxCh
     StageSelect.Build()
 end
 
@@ -69,9 +71,10 @@ function StageSelect.Build()
     for i = 1, stageCount do
         local stageCfg = StageConfig.GetStage(viewChapter_, i)
         local isCurrent = (viewChapter_ == curChapter and i == curStage)
-        -- 已解锁: 在历史最高记录范围内
-        local isUnlocked = (viewChapter_ < maxCh) or (viewChapter_ == maxCh and i <= maxSt)
-        local isCleared = isUnlocked and not isCurrent
+        -- 已通关: 严格在历史最高记录之前 (maxStage 是到达的关, 不是通关的关)
+        local isCleared = (viewChapter_ < maxCh) or (viewChapter_ == maxCh and i < maxSt)
+        -- 已解锁: 已通关 或 当前关 (即到达但未通关)
+        local isUnlocked = isCleared or isCurrent or (viewChapter_ == maxCh and i == maxSt)
         local isLocked = not isUnlocked and not isCurrent
         local isBoss = stageCfg.isBoss or false
 
@@ -128,9 +131,9 @@ function StageSelect.Build()
         })
     end
 
-    -- 章节切换：可查看当前章节前后各一章
-    local minView = math.max(1, curChapter - 1)
-    local maxView = math.min(totalChapters, curChapter + 1)
+    -- 章节切换：可查看最高章节前后各一章（避免章节太多难以切换）
+    local minView = math.max(1, maxCh - 1)
+    local maxView = math.min(totalChapters, maxCh + 1)
     local canPrev = viewChapter_ > minView
     local canNext = viewChapter_ < maxView
 
