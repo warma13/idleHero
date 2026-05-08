@@ -17,7 +17,7 @@ local RedeemSystem = {}
 -- 字段说明:
 --   userIds   : number[]|nil   限定用户ID列表, nil=全服可用
 --   desc      : string         兑换描述(显示给玩家)
---   rewards   : table          物资奖励 (gold/soulCrystal/stone/bagItems)
+--   rewards   : table          物资奖励 (gold/soulCrystal/stone/bagItems/manaPotion)
 --   equips    : table[]        装备奖励 { minQuality, slot?, chapter?, setId? }
 --   setLevel  : number|nil     直接设置玩家等级(含属性点补发)
 --   setChapter: number|nil     设置当前章节(关卡推进)
@@ -98,6 +98,36 @@ RedeemSystem.CODES = {
                 { type = "diamond",  quality = 1, count = 3 },
                 { type = "skull",    quality = 1, count = 3 },
             },
+        },
+    },
+    ["LUCKY-NECKLACE-100"] = {
+        desc       = "幸运项链: 幸运+100%",
+        customItems = {
+            {
+                slot = "necklace", slotName = "项链",
+                qualityIdx = 5, qualityName = "橙色", qualityColor = { 255, 165, 0 },
+                itemPower = 9999,
+                mainStatId = "hpRegen", mainStatBase = 16, mainStatValue = 160,
+                affixes = {
+                    { id = "luck", value = 1.0, greater = true },
+                },
+                setId = nil, upgradeLv = 0,
+                name = "命运之链",
+                sockets = 3,
+                gems = {},
+            },
+        },
+    },
+    ["MANA-POTION-100"] = {
+        desc = "魔力之源×100",
+        rewards = {
+            manaPotion = 100,
+        },
+    },
+    ["MANA-GIFT-2026"] = {
+        desc = "魔力之源×100",
+        rewards = {
+            manaPotion = 100,
         },
     },
     ["RESTORE-629673956"] = {
@@ -269,7 +299,8 @@ function RedeemSystem.Redeem(inputCode)
     end
 
     -- 背包容量预检 (装备)
-    local equipCount = entry.equips and #entry.equips or 0
+    local equipCount = (entry.equips and #entry.equips or 0)
+                     + (entry.customItems and #entry.customItems or 0)
     if equipCount > 0 then
         local capacity = GameState.GetInventorySize()
         local used = #GameState.inventory
@@ -315,6 +346,9 @@ function RedeemSystem.Redeem(inputCode)
                 GameState.AddBagItem(bi.id, bi.count or 1)
             end
         end
+        if rewards.manaPotion and rewards.manaPotion > 0 then
+            GameState.manaPotion.count = (GameState.manaPotion.count or 0) + rewards.manaPotion
+        end
         if rewards.gems then
             for _, g in ipairs(rewards.gems) do
                 GameState.AddGem(g.type, g.quality, g.count or 1)
@@ -352,6 +386,17 @@ function RedeemSystem.Redeem(inputCode)
     if entry.equips then
         for _, equipCfg in ipairs(entry.equips) do
             local item = GenerateRewardEquip(equipCfg)
+            GameState.AddToInventory(item)
+        end
+    end
+
+    -- ================================================================
+    -- 6. 自定义装备 (完整数据直接入库)
+    -- ================================================================
+    if entry.customItems then
+        for _, itemData in ipairs(entry.customItems) do
+            local item = {}
+            for k, v in pairs(itemData) do item[k] = v end
             GameState.AddToInventory(item)
         end
     end

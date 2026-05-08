@@ -1,13 +1,13 @@
 {
   "$schema": "../schemas/project.schema.json",
-  "project_id": "p_amqd",
+  "project_id": "p_mk5c",
   "author": {
     "id": "1779057459"
   },
   "entry": "main.lua",
-  "version": "1.17.2",
+  "version": "1.17.10",
   "taptap_publish": {
-    "developer_id": 396017,
+    "developer_id": 264371,
     "title": "挂机英雄",
     "description": "黑暗降临，术士孤身踏入魔域。\n操控强大的术士，释放碎裂弹幕撕裂成群恶魔。收集散落的装备锻造你的武装，点亮技能树解锁致命连锁——折射、穿透、元素风暴，打造属于你的战斗流派。\n挑战每一章的守关Boss，收集稀有魂晶扩充你的军火库。从史莱姆横行的荒野，到冰霜巨人盘踞的雪狼巢穴，更深处的黑暗还在等待。\n挂机也能变强，在线更有惊喜。",
     "category": "rpg",
@@ -32,13 +32,18 @@
       "https://tapcode-sce.spark.xd.com/assets/game_material/挂机英雄/SCREENSHOT_2026-03-07T11-43-26_02.png",
       "https://tapcode-sce.spark.xd.com/assets/game_material/挂机英雄/SCREENSHOT_2026-03-07T11-43-26_03.png"
     ],
-    "promotional_image_url": "https://tapcode-sce.spark.xd.com/assets/game_material/挂机英雄/PROMO_2026-03-07T11-43-26_01.png"
+    "promotional_image_url": "https://tapcode-sce.spark.xd.com/assets/game_material/挂机英雄/PROMO_2026-03-07T11-43-26_01.png",
+    "cover_horizontal": "./.project/game_material/COVER_HORIZONTAL_2026-04-16T18-52-57_01.png",
+    "cover_horizontal_url": "https://tapcode-sce.spark.xd.com/assets/game_material/挂机英雄/COVER_HORIZONTAL_2026-04-16T18-52-57_01.png",
+    "cover_vertical": "./.project/game_material/COVER_VERTICAL_2026-04-16T18-52-57_01.png",
+    "cover_vertical_url": "https://tapcode-sce.spark.xd.com/assets/game_material/挂机英雄/COVER_VERTICAL_2026-04-16T18-52-57_01.png"
   },
   "test_qrcode": {
     "url": "https://tapcode-sce.spark.xd.com/qrcode/p_mk5c_1772886863564.png",
     "generated_at": "2026-03-07T12:34:23.682Z"
   },
   "metadata": {
-    "updated_at": "2026-03-07T12:34:23.682Z"
+    "updated_at": "2026-04-16T18:53:39.294Z",
+    "promo_dependent_hash": "0f0fc1c7160e5959c0e4ca6781d1602b"
   }
 }
